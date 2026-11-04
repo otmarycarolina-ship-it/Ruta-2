@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  background-color: #f8fafc;
+}
