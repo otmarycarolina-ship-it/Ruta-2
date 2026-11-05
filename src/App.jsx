@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar as CalendarIcon, Clock, BookOpen, Trash2, Target, 
   Timer, ChevronRight, ChevronLeft, UserPlus, Send, X, Play, Pause, RotateCcw,
-  Palette, Smile, CheckCircle2, Bookmark
+  Palette, CheckCircle2, Bookmark, Download, Upload
 } from 'lucide-react';
 
 const App = () => {
@@ -219,6 +219,8 @@ const App = () => {
 
   const [modalNotaDia, setModalNotaDia] = useState(null);
   const [textoNotaInput, setTextoNotaInput] = useState('');
+
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const checkDate = () => {
@@ -494,6 +496,45 @@ const App = () => {
     setDiaBurbujaAbierta(null);
   };
 
+  // --- FUNCIONES SUTILES DE COPIA DE SEGURIDAD (EXPORTAR/IMPORTAR) ---
+  const exportarDatos = () => {
+    const backupObj = {
+      datosMensuales,
+      estudiantesGlobales,
+      temaActual
+    };
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `registro_servicio_respaldo_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const importarDatos = (event) => {
+    const fileReader = new FileReader();
+    if (event.target.files && event.target.files[0]) {
+      fileReader.readAsText(event.target.files[0], "UTF-8");
+      fileReader.onload = (e) => {
+        try {
+          const parsedData = JSON.parse(e.target.result);
+          if (parsedData.datosMensuales) setDatosMensuales(parsedData.datosMensuales);
+          if (parsedData.estudiantesGlobales) setEstudiantesGlobales(parsedData.estudiantesGlobales);
+          if (parsedData.temaActual) setTemaActual(parsedData.temaActual);
+          alert("¡Datos restaurados con éxito!");
+        } catch (error) {
+          alert("Error al leer el archivo de respaldo.");
+        }
+      };
+    }
+  };
+
+  const hoy = new Date();
+  const esHoy = (dia) => {
+    return hoy.getDate() === dia && hoy.getMonth() === mesIndice && hoy.getFullYear() === anioActual;
+  };
+
   const porcentaje = Math.min(100, (totalMinutos / ((currentData.meta || 1) * 60)) * 100);
 
   return (
@@ -508,7 +549,18 @@ const App = () => {
       <div className="max-w-5xl mx-auto relative z-10">
         <header className="text-center mb-10">
           <div className={`inline-flex items-center justify-center p-3 rounded-full ${t.primaryLight} mb-3 shadow-sm transition-colors animate-bounce`}>
-            <Smile size={42} strokeWidth={2.5} className={temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary} />
+            {/* LOGO PERSONALIZADO CON OJOS PERFECTAMENTE REDONDOS */}
+            <svg 
+              width="42" 
+              height="42" 
+              viewBox="0 0 100 100" 
+              className={temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary}
+            >
+              <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="9" />
+              <circle cx="34" cy="38" r="6" fill="currentColor" />
+              <circle cx="66" cy="38" r="6" fill="currentColor" />
+              <path d="M 28 58 Q 50 82 72 58" fill="none" stroke="currentColor" strokeWidth="9" strokeLinecap="round" />
+            </svg>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
             Registro de <span className={temaActual === 'gradienteEstatico' ? "bg-gradient-to-r from-[#7a57d1] to-[#e44d9b] bg-clip-text text-transparent font-black" : `${t.primary} transition-colors`}>Servicio</span>
@@ -650,6 +702,7 @@ const App = () => {
                     const reg = currentData.historial && currentData.historial[dia];
                     const tieneActividad = !!reg;
                     const esSeleccionado = diaSeleccionado === dia;
+                    const esFechaHoy = esHoy(dia);
                     
                     return (
                       <button 
@@ -657,7 +710,8 @@ const App = () => {
                         onClick={() => setDiaSeleccionado(dia)}
                         className={`aspect-square rounded-xl text-xs font-bold transition-all relative flex flex-col items-center justify-center p-1
                           ${tieneActividad ? `text-white shadow-sm ${t.primaryBg}` : `bg-slate-50 text-slate-600 hover:bg-slate-100`}
-                          ${esSeleccionado ? 'ring-2 ring-slate-800 ring-offset-2 scale-105 z-10 font-black' : ''}
+                          ${esFechaHoy ? 'ring-2 ring-black font-black' : ''}
+                          ${esSeleccionado && !esFechaHoy ? 'ring-2 ring-slate-800 ring-offset-2 scale-105 z-10 font-black' : ''}
                         `}
                       >
                         <span>{dia}</span>
@@ -671,7 +725,7 @@ const App = () => {
                   })}
                 </div>
               ) : (
-                /* VISTA 2: HORARIO MENSUAL CON VARIACIONES DINÁMICAS DEL TEMA */
+                /* VISTA 2: HORARIO MENSUAL CON VARIACIONES DINÁMICAS DEL TEMA Y RESALTADO DE HOY EN NEGRO */
                 <div className="grid grid-cols-7 gap-1.5 relative">
                   {[...Array(primerDiaOffset)].map((_, i) => (
                     <div key={`empty-h-${i}`} className="aspect-square"></div>
@@ -682,6 +736,7 @@ const App = () => {
                     const infoHorario = currentData.horarioActividades && currentData.horarioActividades[dia];
                     const estaMarcado = !!infoHorario;
                     const mostrarBurbuja = diaBurbujaAbierta === dia;
+                    const esFechaHoy = esHoy(dia);
                     
                     // Se calcula la variante dinámicamente según el tema actual activo (t.variants)
                     const varianteIndex = (dia - 1) % t.variants.length;
@@ -694,6 +749,7 @@ const App = () => {
                           onDoubleClick={(e) => manejarDobleClickDiaHorario(dia, e)}
                           className={`aspect-square w-full rounded-xl text-xs font-bold transition-all duration-300 relative flex flex-col items-center justify-center p-1 cursor-pointer select-none
                             ${estaMarcado ? `${varianteClass} scale-105 font-black ring-2 ring-white/50` : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}
+                            ${esFechaHoy ? 'ring-2 ring-black font-black text-black' : ''}
                           `}
                           title="Un toque para nota/burbuja | Doble toque para desmarcar"
                         >
@@ -830,6 +886,34 @@ const App = () => {
             </section>
           </div>
         </div>
+      </div>
+
+      {/* BOTONES DISCRETOS Y SUTILES PARA RESPALDO DE DATOS (IMPORTAR Y EXPORTAR) */}
+      <div className="fixed bottom-6 left-6 z-[100] flex gap-2 opacity-50 hover:opacity-100 transition-opacity">
+        <button 
+          onClick={exportarDatos} 
+          className="p-2.5 bg-white/80 hover:bg-white text-slate-600 rounded-xl shadow-sm border border-slate-200 transition-all flex items-center gap-1 text-[11px] font-medium"
+          title="Guardar copia de seguridad"
+        >
+          <Download size={14} />
+          <span className="hidden sm:inline">Guardar copia</span>
+        </button>
+        
+        <button 
+          onClick={() => fileInputRef.current && fileInputRef.current.click()} 
+          className="p-2.5 bg-white/80 hover:bg-white text-slate-600 rounded-xl shadow-sm border border-slate-200 transition-all flex items-center gap-1 text-[11px] font-medium"
+          title="Restaurar copia de seguridad"
+        >
+          <Upload size={14} />
+          <span className="hidden sm:inline">Restaurar</span>
+        </button>
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={importarDatos} 
+          accept=".json" 
+          className="hidden" 
+        />
       </div>
 
       {/* MODAL ESTÉTICO (SIN PLACEHOLDER GRIS) */}
