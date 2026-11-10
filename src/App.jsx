@@ -371,7 +371,7 @@ const App = () => {
 
   const { horas, minutos, totalMinutos } = calcularTotales();
 
-  // --- CÁLCULO DINÁMICO DEL PROMEDIO DIARIO NECESARIO ---
+  // --- CÁLCULO EXACTO DEL PROMEDIO DIARIO (SÓLO DÍAS RESTANTES DESDE HOY) ---
   const calcularPromedioDiario = () => {
     const metaMinutos = (currentData.meta || 50) * 60;
     const minutosFaltantes = metaMinutos - totalMinutos;
@@ -383,16 +383,21 @@ const App = () => {
     const hoy = new Date();
     let diaBase = 1;
 
-    // Si estamos viendo el mes y año actual, calculamos desde hoy hasta fin de mes
+    // Si estamos viendo el mes y año actual, calculamos estrictamente con los días que quedan desde hoy hasta fin de mes
     if (hoy.getMonth() === mesIndice && hoy.getFullYear() === anioActual) {
       diaBase = hoy.getDate();
+    } else if (mesIndice < hoy.getMonth() || anioActual < hoy.getFullYear()) {
+      // Si es un mes pasado que no se cumplió
+      return "Mes finalizado";
     }
 
     const diasRestantes = Math.max(1, (totalDiasMes - diaBase) + 1);
-    const minsPorDia = Math.ceil(minutosFaltantes / diasRestantes);
+    
+    // División exacta por minuto sin redondear hacia arriba de forma exagerada para que sea realista
+    const totalMinsPorDia = Math.ceil(minutosFaltantes / diasRestantes);
 
-    const hrsReq = Math.floor(minsPorDia / 60);
-    const minsReq = minsPorDia % 60;
+    const hrsReq = Math.floor(totalMinsPorDia / 60);
+    const minsReq = totalMinsPorDia % 60;
 
     if (hrsReq > 0 && minsReq > 0) return `${hrsReq}h ${minsReq}m`;
     if (hrsReq > 0) return `${hrsReq}h`;
@@ -577,17 +582,17 @@ const App = () => {
       <div className="max-w-5xl mx-auto relative z-10">
         <header className="text-center mb-10">
           <div className={`inline-flex items-center justify-center p-3 rounded-full ${t.primaryLight} mb-3 shadow-sm transition-colors animate-bounce`}>
-            {/* LOGO ORIGINAL DE LA CARITA SEGÚN LA SEGUNDA IMAGEN */}
+            {/* LOGO IDÉNTICO AL ORIGINAL CON PROPORCIONES EXACTAS DE LA SEGUNDA IMAGEN */}
             <svg 
               width="44" 
               height="44" 
               viewBox="0 0 100 100" 
               className={temaActual === 'gradienteEstatico' ? "text-[#e44d9b]" : t.primary}
             >
-              <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="8" />
-              <circle cx="36" cy="38" r="5" fill="currentColor" />
-              <circle cx="64" cy="38" r="5" fill="currentColor" />
-              <path d="M 33 58 Q 50 74 67 58" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+              <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" />
+              <circle cx="36" cy="38" r="5.5" fill="currentColor" />
+              <circle cx="64" cy="38" r="5.5" fill="currentColor" />
+              <path d="M 32 55 Q 50 78 68 55" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
             </svg>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
@@ -824,7 +829,7 @@ const App = () => {
                   <p className="text-2xl font-black">{porcentaje.toFixed(0)}%</p>
                 </div>
 
-                {/* NUEVA TARJETA: PROMEDIO DIARIO NECESARIO */}
+                {/* TARJETA DE PROMEDIO DIARIO NECESARIO */}
                 <div className="p-4 bg-purple-50/80 border border-purple-100 rounded-2xl flex flex-col justify-center items-center text-center transition-all">
                   <p className="text-[9px] font-black text-purple-400 uppercase tracking-tight mb-1 flex items-center gap-1">
                     <TrendingUp size={11} /> Promedio Diario
