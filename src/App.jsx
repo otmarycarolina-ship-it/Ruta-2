@@ -9,6 +9,7 @@ const App = () => {
   const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const diasSemana = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"];
   
+  // Organizados por tonalidad con variaciones de intensidad para el horario mensual
   const temas = {
     gradienteEstatico: {
       name: "Gradiente",
@@ -248,6 +249,7 @@ const App = () => {
   const [showEditModal, setShowEditModal] = useState(null);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
 
+  // --- CRONÓMETRO CON RECALCULO AUTOMÁTICO ---
   const [isTimerRunning, setIsTimerRunning] = useState(() => {
     return localStorage.getItem('timer_is_running') === 'true';
   });
@@ -368,6 +370,35 @@ const App = () => {
   };
 
   const { horas, minutos, totalMinutos } = calcularTotales();
+
+  // --- CÁLCULO DINÁMICO DEL PROMEDIO DIARIO NECESARIO ---
+  const calcularPromedioDiario = () => {
+    const metaMinutos = (currentData.meta || 50) * 60;
+    const minutosFaltantes = metaMinutos - totalMinutos;
+
+    if (minutosFaltantes <= 0) {
+      return "¡Meta cumplida!";
+    }
+
+    const hoy = new Date();
+    let diaBase = 1;
+
+    // Si estamos viendo el mes y año actual, calculamos desde hoy hasta fin de mes
+    if (hoy.getMonth() === mesIndice && hoy.getFullYear() === anioActual) {
+      diaBase = hoy.getDate();
+    }
+
+    const diasRestantes = Math.max(1, (totalDiasMes - diaBase) + 1);
+    const minsPorDia = Math.ceil(minutosFaltantes / diasRestantes);
+
+    const hrsReq = Math.floor(minsPorDia / 60);
+    const minsReq = minsPorDia % 60;
+
+    if (hrsReq > 0 && minsReq > 0) return `${hrsReq}h ${minsReq}m`;
+    if (hrsReq > 0) return `${hrsReq}h`;
+    return `${minsReq}m`;
+  };
+
   const updateCurrentMonth = (newData) => {
     setDatosMensuales(prev => ({ ...prev, [storageKey]: { ...currentData, ...newData } }));
   };
@@ -534,25 +565,6 @@ const App = () => {
 
   const porcentaje = Math.min(100, (totalMinutos / ((currentData.meta || 1) * 60)) * 100);
 
-  // --- CÁLCULO DEL PROMEDIO DIARIO NECESARIO ---
-  const calcularPromedioDiario = () => {
-    const metaMinutosTotal = (currentData.meta || 0) * 60;
-    const minutosRestantes = Math.max(0, metaMinutosTotal - totalMinutos);
-    
-    // Días que quedan contando desde hoy (o el día actual del mes) hasta el final del mes
-    const diaActualNum = (hoy.getMonth() === mesIndice && hoy.getFullYear() === anioActual) ? hoy.getDate() : 1;
-    const diasRestantes = Math.max(1, (totalDiasMes - diaActualNum) + 1);
-    
-    const minutosPorDia = Math.ceil(minutosRestantes / diasRestantes);
-    const hNec = Math.floor(minutosPorDia / 60);
-    const mNec = minutosPorDia % 60;
-
-    if (minutosRestantes <= 0) return "¡Meta cumplida! 🎉";
-    if (hNec > 0 && mNec > 0) return `${h}h ${mNec}m / día`;
-    if (hNec > 0) return `${hNec}h / día`;
-    return `${mNec}m / día`;
-  };
-
   return (
     <div className={`min-h-screen ${t.bgOverlay} p-4 md:p-10 font-sans text-slate-700 relative overflow-x-hidden transition-all duration-700`}>
       {t.localImg && (
@@ -565,17 +577,17 @@ const App = () => {
       <div className="max-w-5xl mx-auto relative z-10">
         <header className="text-center mb-10">
           <div className={`inline-flex items-center justify-center p-3 rounded-full ${t.primaryLight} mb-3 shadow-sm transition-colors animate-bounce`}>
-            {/* LOGO EXACTO DE LA CARITA CON OJOS REDONDOS PERFECTOS */}
+            {/* LOGO ORIGINAL DE LA CARITA SEGÚN LA SEGUNDA IMAGEN */}
             <svg 
-              width="42" 
-              height="42" 
+              width="44" 
+              height="44" 
               viewBox="0 0 100 100" 
-              className={temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary}
+              className={temaActual === 'gradienteEstatico' ? "text-[#e44d9b]" : t.primary}
             >
               <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="8" />
               <circle cx="36" cy="38" r="5" fill="currentColor" />
               <circle cx="64" cy="38" r="5" fill="currentColor" />
-              <path d="M 32 58 Q 50 78 68 58" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+              <path d="M 33 58 Q 50 74 67 58" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
             </svg>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
@@ -706,6 +718,7 @@ const App = () => {
                 ))}
               </div>
 
+              {/* VISTA 1: CALENDARIO DE REGISTRO DE HORAS */}
               {modoCalendario === 'registro' ? (
                 <div className="grid grid-cols-7 gap-1.5">
                   {[...Array(primerDiaOffset)].map((_, i) => (
@@ -740,6 +753,7 @@ const App = () => {
                   })}
                 </div>
               ) : (
+                /* VISTA 2: HORARIO MENSUAL */
                 <div className="grid grid-cols-7 gap-1.5 relative">
                   {[...Array(primerDiaOffset)].map((_, i) => (
                     <div key={`empty-h-${i}`} className="aspect-square"></div>
@@ -788,7 +802,7 @@ const App = () => {
             </section>
           </div>
 
-          {/* PANEL DERECHO: MÉTRICAS, PROMEDIO DIARIO Y ESTUDIANTES */}
+          {/* PANEL DERECHO: MÉTRICAS, INFORMES Y ESTUDIANTES */}
           <div className="lg:col-span-7 space-y-8">
             <section className="bg-white p-6 md:p-8 rounded-[3rem] shadow-sm border border-slate-100 text-center">
               
@@ -809,14 +823,13 @@ const App = () => {
                   <p className="text-[10px] font-bold opacity-80 uppercase mb-1">Progreso</p>
                   <p className="text-2xl font-black">{porcentaje.toFixed(0)}%</p>
                 </div>
-                
-                {/* NUEVA TARJETA ÚTIL: PROMEDIO DIARIO NECESARIO */}
-                <div className="p-4 bg-slate-50 rounded-2xl flex flex-col items-center justify-center border border-slate-100 transition-all hover:shadow-inner">
-                  <div className="flex items-center gap-1 text-slate-400 mb-1">
-                    <TrendingUp size={14} />
-                    <span className="text-[9px] font-bold uppercase tracking-wider">Promedio Diario</span>
-                  </div>
-                  <p className={`text-base font-black ${temaActual === 'gradienteEstatico' ? 'bg-gradient-to-r from-[#7a57d1] to-[#e44d9b] bg-clip-text text-transparent' : t.primary}`}>
+
+                {/* NUEVA TARJETA: PROMEDIO DIARIO NECESARIO */}
+                <div className="p-4 bg-purple-50/80 border border-purple-100 rounded-2xl flex flex-col justify-center items-center text-center transition-all">
+                  <p className="text-[9px] font-black text-purple-400 uppercase tracking-tight mb-1 flex items-center gap-1">
+                    <TrendingUp size={11} /> Promedio Diario
+                  </p>
+                  <p className={temaActual === 'gradienteEstatico' ? "text-xl font-black bg-gradient-to-r from-[#7a57d1] to-[#e44d9b] bg-clip-text text-transparent" : `text-xl font-black ${t.primary}`}>
                     {calcularPromedioDiario()}
                   </p>
                 </div>
@@ -931,6 +944,7 @@ const App = () => {
         />
       </div>
 
+      {/* MODAL ESTÉTICO (SIN PLACEHOLDER GRIS) */}
       {modalNotaDia !== null && (
         <div className="fixed inset-0 z-[120] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-6">
@@ -1005,6 +1019,7 @@ const App = () => {
         </button>
       </div>
 
+      {/* MODAL PARA AÑADIR / EDITAR CURSO */}
       {showEditModal && (
         <div className="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-6">
