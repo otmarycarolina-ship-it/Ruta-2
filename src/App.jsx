@@ -2,14 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar as CalendarIcon, Clock, BookOpen, Trash2, Target, 
   Timer, ChevronRight, ChevronLeft, UserPlus, Send, X, Play, Pause, RotateCcw,
-  Palette, CheckCircle2, Bookmark, Download, Upload, TrendingUp
+  Palette, CheckCircle2, Bookmark, Download, Upload, Calculator, HelpCircle
 } from 'lucide-react';
 
 const App = () => {
   const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const diasSemana = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"];
   
-  // Organizados por tonalidad con variaciones de intensidad para el horario mensual
   const temas = {
     gradienteEstatico: {
       name: "Gradiente",
@@ -219,6 +218,7 @@ const App = () => {
 
   const [modalNotaDia, setModalNotaDia] = useState(null);
   const [textoNotaInput, setTextoNotaInput] = useState('');
+  const [showPromedioInfo, setShowPromedioInfo] = useState(false);
 
   const fileInputRef = useRef(null);
 
@@ -249,7 +249,6 @@ const App = () => {
   const [showEditModal, setShowEditModal] = useState(null);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
 
-  // --- CRONÓMETRO CON RECALCULO AUTOMÁTICO ---
   const [isTimerRunning, setIsTimerRunning] = useState(() => {
     return localStorage.getItem('timer_is_running') === 'true';
   });
@@ -371,37 +370,38 @@ const App = () => {
 
   const { horas, minutos, totalMinutos } = calcularTotales();
 
-  // --- CÁLCULO EXACTO DEL PROMEDIO DIARIO (SÓLO DÍAS RESTANTES DESDE HOY) ---
+  // --- CÁLCULO DINÁMICO DEL PROMEDIO DIARIO NECESARIO ---
   const calcularPromedioDiario = () => {
-    const metaMinutos = (currentData.meta || 50) * 60;
-    const minutosFaltantes = metaMinutos - totalMinutos;
+    const metaMinutos = (currentData.meta || 1) * 60;
+    const minutosFaltantes = Math.max(0, metaMinutos - totalMinutos);
+    if (minutosFaltantes === 0) return "¡Meta cumplida!";
 
-    if (minutosFaltantes <= 0) {
-      return "¡Meta cumplida!";
+    const hoyNum = new Date().getDate();
+    const esMesActual = new Date().getMonth() === mesIndice && new Date().getFullYear() === anioActual;
+
+    let diasHabiLesRestantes = 0;
+    const horario = currentData.horarioActividades || {};
+    const tienePlanesConfigurados = Object.keys(horario).length > 0;
+
+    for (let d = 1; d <= totalDiasMes; d++) {
+      if (esMesActual && d < hoyNum) continue; // Ignorar días pasados si estamos en el mes en curso
+
+      if (tienePlanesConfigurados) {
+        if (horario[d]) diasHabiLesRestantes++;
+      } else {
+        diasHabiLesRestantes++;
+      }
     }
 
-    const hoy = new Date();
-    let diaBase = 1;
+    if (diasHabiLesRestantes === 0) return "Sin días restantes";
 
-    // Si estamos viendo el mes y año actual, calculamos estrictamente con los días que quedan desde hoy hasta fin de mes
-    if (hoy.getMonth() === mesIndice && hoy.getFullYear() === anioActual) {
-      diaBase = hoy.getDate();
-    } else if (mesIndice < hoy.getMonth() || anioActual < hoy.getFullYear()) {
-      // Si es un mes pasado que no se cumplió
-      return "Mes finalizado";
-    }
+    const minPorDia = Math.ceil(minutosFaltantes / diasHabiLesRestantes);
+    const hReq = Math.floor(minPorDia / 60);
+    const mReq = minPorDia % 60;
 
-    const diasRestantes = Math.max(1, (totalDiasMes - diaBase) + 1);
-    
-    // División exacta por minuto sin redondear hacia arriba de forma exagerada para que sea realista
-    const totalMinsPorDia = Math.ceil(minutosFaltantes / diasRestantes);
-
-    const hrsReq = Math.floor(totalMinsPorDia / 60);
-    const minsReq = totalMinsPorDia % 60;
-
-    if (hrsReq > 0 && minsReq > 0) return `${hrsReq}h ${minsReq}m`;
-    if (hrsReq > 0) return `${hrsReq}h`;
-    return `${minsReq}m`;
+    if (hReq > 0 && mReq > 0) return `${hReq}h ${mReq}m /día`;
+    if (hReq > 0) return `${hReq}h /día`;
+    return `${mReq}m /día`;
   };
 
   const updateCurrentMonth = (newData) => {
@@ -582,17 +582,17 @@ const App = () => {
       <div className="max-w-5xl mx-auto relative z-10">
         <header className="text-center mb-10">
           <div className={`inline-flex items-center justify-center p-3 rounded-full ${t.primaryLight} mb-3 shadow-sm transition-colors animate-bounce`}>
-            {/* LOGO IDÉNTICO AL ORIGINAL CON PROPORCIONES EXACTAS DE LA SEGUNDA IMAGEN */}
+            {/* LOGO ORIGINAL EXACTAMENTE IGUAL A LA SEGUNDA IMAGEN */}
             <svg 
               width="44" 
               height="44" 
               viewBox="0 0 100 100" 
-              className={temaActual === 'gradienteEstatico' ? "text-[#e44d9b]" : t.primary}
+              className={temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary}
             >
-              <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" />
-              <circle cx="36" cy="38" r="5.5" fill="currentColor" />
-              <circle cx="64" cy="38" r="5.5" fill="currentColor" />
-              <path d="M 32 55 Q 50 78 68 55" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+              <circle cx="50" cy="50" r="41" fill="none" stroke="currentColor" strokeWidth="8.5" />
+              <circle cx="34" cy="37" r="6.5" fill="currentColor" />
+              <circle cx="66" cy="37" r="6.5" fill="currentColor" />
+              <path d="M 28 58 Q 50 82 72 58" fill="none" stroke="currentColor" strokeWidth="8.5" strokeLinecap="round" />
             </svg>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
@@ -663,7 +663,7 @@ const App = () => {
         {/* GRID PRINCIPAL */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* PANEL IZQUIERDO: FORMULARIO Y CALENDARIO DUAL */}
+          {/* PANEL IZQUIERDO */}
           <div className="lg:col-span-5 space-y-8">
             <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center justify-between">
@@ -694,7 +694,6 @@ const App = () => {
 
             {/* CONTENEDOR DEL CALENDARIO DUAL */}
             <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 relative">
-              
               <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">
                   {modoCalendario === 'registro' ? 'Calendario de Actividad' : 'Horario Mensual'}
@@ -723,7 +722,6 @@ const App = () => {
                 ))}
               </div>
 
-              {/* VISTA 1: CALENDARIO DE REGISTRO DE HORAS */}
               {modoCalendario === 'registro' ? (
                 <div className="grid grid-cols-7 gap-1.5">
                   {[...Array(primerDiaOffset)].map((_, i) => (
@@ -758,7 +756,6 @@ const App = () => {
                   })}
                 </div>
               ) : (
-                /* VISTA 2: HORARIO MENSUAL */
                 <div className="grid grid-cols-7 gap-1.5 relative">
                   {[...Array(primerDiaOffset)].map((_, i) => (
                     <div key={`empty-h-${i}`} className="aspect-square"></div>
@@ -807,7 +804,7 @@ const App = () => {
             </section>
           </div>
 
-          {/* PANEL DERECHO: MÉTRICAS, INFORMES Y ESTUDIANTES */}
+          {/* PANEL DERECHO: MÉTRICAS E INFORMES */}
           <div className="lg:col-span-7 space-y-8">
             <section className="bg-white p-6 md:p-8 rounded-[3rem] shadow-sm border border-slate-100 text-center">
               
@@ -818,27 +815,55 @@ const App = () => {
                     {horas}h {minutos}m
                   </p>
                 </div>
+
                 <div className="p-4 bg-slate-50 rounded-2xl transition-all hover:shadow-inner">
                   <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Cursos</p>
                   <p className={temaActual === 'gradienteEstatico' ? "text-2xl font-black text-[#e44d9b]" : `text-2xl font-black ${t.primary}`}>
                     {estudiantesVisibles.length}
                   </p>
                 </div>
+
                 <div className={`p-4 rounded-2xl text-white shadow-md transition-colors ${t.primaryBg}`}>
                   <p className="text-[10px] font-bold opacity-80 uppercase mb-1">Progreso</p>
                   <p className="text-2xl font-black">{porcentaje.toFixed(0)}%</p>
                 </div>
 
-                {/* TARJETA DE PROMEDIO DIARIO NECESARIO */}
-                <div className="p-4 bg-purple-50/80 border border-purple-100 rounded-2xl flex flex-col justify-center items-center text-center transition-all">
-                  <p className="text-[9px] font-black text-purple-400 uppercase tracking-tight mb-1 flex items-center gap-1">
-                    <TrendingUp size={11} /> Promedio Diario
-                  </p>
-                  <p className={temaActual === 'gradienteEstatico' ? "text-xl font-black bg-gradient-to-r from-[#7a57d1] to-[#e44d9b] bg-clip-text text-transparent" : `text-xl font-black ${t.primary}`}>
+                {/* HERRAMIENTA UTILITARIA EN SUSTITUACIÓN DEL BOTÓN LIMPIAR */}
+                <div 
+                  onClick={() => setShowPromedioInfo(!showPromedioInfo)}
+                  className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all relative group"
+                  title="Haz clic para ver cómo se calcula"
+                >
+                  <div className="flex items-center gap-1 mb-0.5">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">Promedio Diario</p>
+                    <HelpCircle size={10} className="text-slate-400" />
+                  </div>
+                  <p className={`text-base font-black ${t.primary} transition-colors line-clamp-1`}>
                     {calcularPromedioDiario()}
                   </p>
                 </div>
               </div>
+
+              {/* POPUP EXPLICATIVO DE LA HERRAMIENTA DE PROMEDIO */}
+              {showPromedioInfo && (
+                <div className="mb-6 p-4 bg-purple-50/70 border border-purple-100 rounded-2xl text-left text-xs text-slate-600 animate-in fade-in duration-200 relative">
+                  <button 
+                    onClick={() => setShowPromedioInfo(false)} 
+                    className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={14} />
+                  </button>
+                  <p className="font-bold text-slate-800 mb-1 flex items-center gap-1">
+                    <Calculator size={14} className={t.primary} /> ¿Cómo funciona el Promedio Diario Necesario?
+                  </p>
+                  <p className="leading-relaxed text-[11px]">
+                    Toma las horas que te faltan para alcanzar tu meta y las divide equitativamente entre los días restantes del mes.
+                  </p>
+                  <p className="leading-relaxed text-[11px] font-semibold mt-1.5 text-slate-700">
+                    💡 Si organizas tu <strong>Horario Mensual</strong> marcando los días que vas a salir, se sincroniza automáticamente para calcular la meta dividiéndola únicamente entre tus días planeados. Así evitas sorpresas a fin de mes y ajustas tu ritmo diario con tranquilidad.
+                  </p>
+                </div>
+              )}
 
               <div className="mb-8 bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
                 <div 
@@ -921,7 +946,7 @@ const App = () => {
         </div>
       </div>
 
-      {/* BOTONES DISCRETOS Y SUTILES PARA RESPALDO DE DATOS (IMPORTAR Y EXPORTAR) */}
+      {/* BOTONES DISCRETOS Y SUTILES PARA RESPALDO DE DATOS */}
       <div className="fixed bottom-6 left-6 z-[100] flex gap-2 opacity-50 hover:opacity-100 transition-opacity">
         <button 
           onClick={exportarDatos} 
@@ -949,7 +974,7 @@ const App = () => {
         />
       </div>
 
-      {/* MODAL ESTÉTICO (SIN PLACEHOLDER GRIS) */}
+      {/* MODAL ACTIVIDAD DEL DÍA */}
       {modalNotaDia !== null && (
         <div className="fixed inset-0 z-[120] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-6">
@@ -991,7 +1016,7 @@ const App = () => {
         </div>
       )}
 
-      {/* SELECTOR FLOTANTE DE TEMAS ORGANIZADO POR TONALIDAD */}
+      {/* SELECTOR FLOTANTE DE TEMAS */}
       <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3">
         {showThemeSelector && (
             <div className="bg-white/95 backdrop-blur-md p-3 rounded-3xl shadow-2xl border border-slate-100 flex flex-col gap-3 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 scrollbar-none">
