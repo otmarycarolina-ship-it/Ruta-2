@@ -2,14 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar as CalendarIcon, Clock, BookOpen, Trash2, Target, 
   Timer, ChevronRight, ChevronLeft, UserPlus, Send, X, Play, Pause, RotateCcw,
-  Palette, CheckCircle2, Bookmark, Download, Upload
+  Palette, CheckCircle2, Bookmark, Download, Upload, CalendarDays
 } from 'lucide-react';
 
 const App = () => {
   const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const diasSemana = ["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"];
   
-  // Organizados por tonalidad con variaciones de intensidad para el horario mensual
   const temas = {
     gradienteEstatico: {
       name: "Gradiente",
@@ -249,7 +248,6 @@ const App = () => {
   const [showEditModal, setShowEditModal] = useState(null);
   const [showThemeSelector, setShowThemeSelector] = useState(false);
 
-  // --- CRONÓMETRO CON RECALCULO AUTOMÁTICO ---
   const [isTimerRunning, setIsTimerRunning] = useState(() => {
     return localStorage.getItem('timer_is_running') === 'true';
   });
@@ -370,6 +368,11 @@ const App = () => {
   };
 
   const { horas, minutos, totalMinutos } = calcularTotales();
+  const diasConRegistro = Object.keys(currentData.historial || {}).filter(d => {
+    const reg = currentData.historial[d];
+    return reg && (reg.h > 0 || reg.m > 0);
+  }).length;
+
   const updateCurrentMonth = (newData) => {
     setDatosMensuales(prev => ({ ...prev, [storageKey]: { ...currentData, ...newData } }));
   };
@@ -496,7 +499,6 @@ const App = () => {
     setDiaBurbujaAbierta(null);
   };
 
-  // --- FUNCIONES SUTILES DE COPIA DE SEGURIDAD (EXPORTAR/IMPORTAR) ---
   const exportarDatos = () => {
     const backupObj = {
       datosMensuales,
@@ -549,17 +551,15 @@ const App = () => {
       <div className="max-w-5xl mx-auto relative z-10">
         <header className="text-center mb-10">
           <div className={`inline-flex items-center justify-center p-3 rounded-full ${t.primaryLight} mb-3 shadow-sm transition-colors animate-bounce`}>
-            {/* LOGO PERSONALIZADO CON OJOS PERFECTAMENTE REDONDOS */}
+            {/* LOGO MEJORADO EXACTO A LA SEGUNDA IMAGEN */}
             <svg 
-              width="42" 
-              height="42" 
               viewBox="0 0 100 100" 
-              className={temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary}
+              className={`w-11 h-11 ${temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary}`}
             >
-              <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="9" />
-              <circle cx="34" cy="38" r="6" fill="currentColor" />
-              <circle cx="66" cy="38" r="6" fill="currentColor" />
-              <path d="M 28 58 Q 50 82 72 58" fill="none" stroke="currentColor" strokeWidth="9" strokeLinecap="round" />
+              <circle cx="50" cy="50" r="41" fill="none" stroke="currentColor" strokeWidth="8" />
+              <circle cx="36" cy="38" r="5.5" fill="currentColor" />
+              <circle cx="64" cy="38" r="5.5" fill="currentColor" />
+              <path d="M 33 56 Q 50 72 67 56" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
             </svg>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
@@ -630,7 +630,7 @@ const App = () => {
         {/* GRID PRINCIPAL */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* PANEL IZQUIERDO: FORMULARIO Y CALENDARIO DUAL */}
+          {/* PANEL IZQUIERDO */}
           <div className="lg:col-span-5 space-y-8">
             <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center justify-between">
@@ -690,7 +690,6 @@ const App = () => {
                 ))}
               </div>
 
-              {/* VISTA 1: CALENDARIO DE REGISTRO DE HORAS */}
               {modoCalendario === 'registro' ? (
                 <div className="grid grid-cols-7 gap-1.5">
                   {[...Array(primerDiaOffset)].map((_, i) => (
@@ -725,7 +724,6 @@ const App = () => {
                   })}
                 </div>
               ) : (
-                /* VISTA 2: HORARIO MENSUAL CON VARIACIONES DINÁMICAS DEL TEMA Y RESALTADO DE HOY EN NEGRO */
                 <div className="grid grid-cols-7 gap-1.5 relative">
                   {[...Array(primerDiaOffset)].map((_, i) => (
                     <div key={`empty-h-${i}`} className="aspect-square"></div>
@@ -738,7 +736,6 @@ const App = () => {
                     const mostrarBurbuja = diaBurbujaAbierta === dia;
                     const esFechaHoy = esHoy(dia);
                     
-                    // Se calcula la variante dinámicamente según el tema actual activo (t.variants)
                     const varianteIndex = (dia - 1) % t.variants.length;
                     const varianteClass = t.variants[varianteIndex];
 
@@ -751,7 +748,7 @@ const App = () => {
                             ${estaMarcado ? `${varianteClass} scale-105 font-black ring-2 ring-white/50` : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}
                             ${esFechaHoy ? 'ring-2 ring-black font-black text-black' : ''}
                           `}
-                          title="Un toque para nota/burbuja | Doble toque para desmarcar"
+                          title="Un toque para nota | Doble toque para borrar"
                         >
                           <span>{dia}</span>
                           {estaMarcado && (
@@ -759,7 +756,6 @@ const App = () => {
                           )}
                         </button>
 
-                        {/* BURBUJA DE PENSAMIENTO FLOTANTE */}
                         {mostrarBurbuja && infoHorario && (
                           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-30 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
                             <div className={`relative px-3 py-1.5 rounded-2xl shadow-xl text-[10px] font-bold whitespace-nowrap border backdrop-blur-md ${t.bubbleBg}`}>
@@ -776,7 +772,7 @@ const App = () => {
             </section>
           </div>
 
-          {/* PANEL DERECHO: MÉTRICAS, INFORMES Y ESTUDIANTES */}
+          {/* PANEL DERECHO */}
           <div className="lg:col-span-7 space-y-8">
             <section className="bg-white p-6 md:p-8 rounded-[3rem] shadow-sm border border-slate-100 text-center">
               
@@ -797,32 +793,46 @@ const App = () => {
                   <p className="text-[10px] font-bold opacity-80 uppercase mb-1">Progreso</p>
                   <p className="text-2xl font-black">{porcentaje.toFixed(0)}%</p>
                 </div>
-                <button 
-                  onClick={() => {if(window.confirm("¿Deseas reiniciar todos los registros de este mes?")) updateCurrentMonth({historial:{}})}} 
-                  className="p-4 bg-red-50 text-red-500 rounded-2xl flex flex-col items-center justify-center hover:bg-red-100 transition-colors group"
-                  title="Reiniciar mes"
-                >
-                  <Trash2 size={20} className="transition-transform group-hover:scale-110 mb-0.5" />
-                  <span className="text-[9px] font-black uppercase">Limpiar</span>
-                </button>
+
+                {/* BOTÓN REEMPLAZADO: DÍAS ACTIVOS (EN LUGAR DEL BOTÓN DE LIMPIAR) */}
+                <div className="p-4 bg-slate-50 rounded-2xl transition-all hover:shadow-inner flex flex-col items-center justify-center">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Días Activos</p>
+                  <p className={temaActual === 'gradienteEstatico' ? "text-2xl font-black text-[#7a57d1]" : `text-2xl font-black ${t.primary}`}>
+                    {diasConRegistro}
+                  </p>
+                </div>
               </div>
 
-              <div className="mb-8 bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
+              <div className="mb-6 bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
                 <div 
                   className={`h-full rounded-full transition-all duration-1000 ${t.primaryBg}`} 
                   style={{ width: `${porcentaje}%` }}
                 ></div>
               </div>
 
-              <button 
-                onClick={enviarWhatsApp} 
-                className="w-full bg-[#25D366] text-white py-4 px-8 rounded-2xl font-black uppercase tracking-widest text-xs md:text-sm shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-              >
-                <Send size={18} className="fill-white" /> ENVIAR INFORME POR WHATSAPP
-              </button>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={enviarWhatsApp} 
+                  className="w-full bg-[#25D366] text-white py-4 px-8 rounded-2xl font-black uppercase tracking-widest text-xs md:text-sm shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+                >
+                  <Send size={18} className="fill-white" /> ENVIAR INFORME POR WHATSAPP
+                </button>
+
+                {/* OPCIÓN DISCRETA PARA REINICIAR EL MES AL FINAL DEL PANEL CON CONFIRMACIÓN */}
+                <button 
+                  onClick={() => {
+                    if(window.confirm("¿Estás segura de reiniciar los registros de horas de este mes? Se mantendrán tus cursos.")) {
+                      updateCurrentMonth({ historial: {} });
+                    }
+                  }} 
+                  className="text-slate-400 hover:text-red-500 text-[11px] font-bold uppercase tracking-wider py-1 transition-colors self-center flex items-center gap-1"
+                >
+                  <Trash2 size={12} /> Reiniciar registros del mes
+                </button>
+              </div>
             </section>
 
-            {/* CURSOS BÍBLICOS DETALLADOS */}
+            {/* CURSOS BÍBLICOS */}
             <section className="bg-white p-6 md:p-8 rounded-[3rem] shadow-sm border border-slate-100">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -888,7 +898,7 @@ const App = () => {
         </div>
       </div>
 
-      {/* BOTONES DISCRETOS Y SUTILES PARA RESPALDO DE DATOS (IMPORTAR Y EXPORTAR) */}
+      {/* RESPALDO DE DATOS */}
       <div className="fixed bottom-6 left-6 z-[100] flex gap-2 opacity-50 hover:opacity-100 transition-opacity">
         <button 
           onClick={exportarDatos} 
@@ -916,7 +926,7 @@ const App = () => {
         />
       </div>
 
-      {/* MODAL ESTÉTICO (SIN PLACEHOLDER GRIS) */}
+      {/* MODAL NOTA DÍA */}
       {modalNotaDia !== null && (
         <div className="fixed inset-0 z-[120] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-6">
@@ -958,7 +968,7 @@ const App = () => {
         </div>
       )}
 
-      {/* SELECTOR FLOTANTE DE TEMAS ORGANIZADO POR TONALIDAD */}
+      {/* SELECTOR DE TEMAS */}
       <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3">
         {showThemeSelector && (
             <div className="bg-white/95 backdrop-blur-md p-3 rounded-3xl shadow-2xl border border-slate-100 flex flex-col gap-3 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 scrollbar-none">
@@ -991,7 +1001,7 @@ const App = () => {
         </button>
       </div>
 
-      {/* MODAL PARA AÑADIR / EDITAR CURSO */}
+      {/* MODAL CURSO */}
       {showEditModal && (
         <div className="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-6">
