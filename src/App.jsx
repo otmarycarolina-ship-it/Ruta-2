@@ -368,21 +368,6 @@ const App = () => {
   };
 
   const { horas, minutos, totalMinutos } = calcularTotales();
-
-  // --- CÁLCULO DE PROMEDIO DIARIO NECESARIO ---
-  const metaMinutos = (currentData.meta || 50) * 60;
-  const minutosFaltantes = Math.max(0, metaMinutos - totalMinutos);
-  
-  // Días que quedan en el mes contando desde hoy (o el total de días si se prefiere, aquí calculamos según los días restantes del mes)
-  const diaActualNum = new Date().getDate();
-  const esMesActual = new Date().getMonth() === mesIndice && new Date().getFullYear() === anioActual;
-  const diasRestantes = esMesActual ? Math.max(1, totalDiasMes - diaActualNum + 1) : totalDiasMes;
-  
-  const promedioNecesarioMinutos = Math.ceil(minutosFaltantes / diasRestantes);
-  const promNecH = Math.floor(promedioNecesarioMinutos / 60);
-  const promNecM = promedioNecesarioMinutos % 60;
-  const textoPromedioNecesario = promNecH > 0 ? `${promNecH}h ${promNecM}m` : `${promNecM}m`;
-
   const updateCurrentMonth = (newData) => {
     setDatosMensuales(prev => ({ ...prev, [storageKey]: { ...currentData, ...newData } }));
   };
@@ -549,6 +534,25 @@ const App = () => {
 
   const porcentaje = Math.min(100, (totalMinutos / ((currentData.meta || 1) * 60)) * 100);
 
+  // --- CÁLCULO DEL PROMEDIO DIARIO NECESARIO ---
+  const calcularPromedioDiario = () => {
+    const metaMinutosTotal = (currentData.meta || 0) * 60;
+    const minutosRestantes = Math.max(0, metaMinutosTotal - totalMinutos);
+    
+    // Días que quedan contando desde hoy (o el día actual del mes) hasta el final del mes
+    const diaActualNum = (hoy.getMonth() === mesIndice && hoy.getFullYear() === anioActual) ? hoy.getDate() : 1;
+    const diasRestantes = Math.max(1, (totalDiasMes - diaActualNum) + 1);
+    
+    const minutosPorDia = Math.ceil(minutosRestantes / diasRestantes);
+    const hNec = Math.floor(minutosPorDia / 60);
+    const mNec = minutosPorDia % 60;
+
+    if (minutosRestantes <= 0) return "¡Meta cumplida! 🎉";
+    if (hNec > 0 && mNec > 0) return `${h}h ${mNec}m / día`;
+    if (hNec > 0) return `${hNec}h / día`;
+    return `${mNec}m / día`;
+  };
+
   return (
     <div className={`min-h-screen ${t.bgOverlay} p-4 md:p-10 font-sans text-slate-700 relative overflow-x-hidden transition-all duration-700`}>
       {t.localImg && (
@@ -561,15 +565,17 @@ const App = () => {
       <div className="max-w-5xl mx-auto relative z-10">
         <header className="text-center mb-10">
           <div className={`inline-flex items-center justify-center p-3 rounded-full ${t.primaryLight} mb-3 shadow-sm transition-colors animate-bounce`}>
-            {/* CARITA IDÉNTICA Y EXACTA A LA SEGUNDA IMAGEN */}
+            {/* LOGO EXACTO DE LA CARITA CON OJOS REDONDOS PERFECTOS */}
             <svg 
+              width="42" 
+              height="42" 
               viewBox="0 0 100 100" 
-              className={`w-11 h-11 ${temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary}`}
+              className={temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary}
             >
-              <circle cx="50" cy="50" r="41" fill="none" stroke="currentColor" strokeWidth="8" />
-              <circle cx="36" cy="38" r="5.5" fill="currentColor" />
-              <circle cx="64" cy="38" r="5.5" fill="currentColor" />
-              <path d="M 34 57 Q 50 71 66 57" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+              <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="8" />
+              <circle cx="36" cy="38" r="5" fill="currentColor" />
+              <circle cx="64" cy="38" r="5" fill="currentColor" />
+              <path d="M 32 58 Q 50 78 68 58" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
             </svg>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
@@ -640,7 +646,7 @@ const App = () => {
         {/* GRID PRINCIPAL */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* PANEL IZQUIERDO */}
+          {/* PANEL IZQUIERDO: FORMULARIO Y CALENDARIO DUAL */}
           <div className="lg:col-span-5 space-y-8">
             <section className="bg-white p-6 md:p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center justify-between">
@@ -758,7 +764,7 @@ const App = () => {
                             ${estaMarcado ? `${varianteClass} scale-105 font-black ring-2 ring-white/50` : 'bg-slate-50 text-slate-600 hover:bg-slate-100'}
                             ${esFechaHoy ? 'ring-2 ring-black font-black text-black' : ''}
                           `}
-                          title="Un toque para nota | Doble toque para borrar"
+                          title="Un toque para nota/burbuja | Doble toque para desmarcar"
                         >
                           <span>{dia}</span>
                           {estaMarcado && (
@@ -782,7 +788,7 @@ const App = () => {
             </section>
           </div>
 
-          {/* PANEL DERECHO */}
+          {/* PANEL DERECHO: MÉTRICAS, PROMEDIO DIARIO Y ESTUDIANTES */}
           <div className="lg:col-span-7 space-y-8">
             <section className="bg-white p-6 md:p-8 rounded-[3rem] shadow-sm border border-slate-100 text-center">
               
@@ -803,48 +809,35 @@ const App = () => {
                   <p className="text-[10px] font-bold opacity-80 uppercase mb-1">Progreso</p>
                   <p className="text-2xl font-black">{porcentaje.toFixed(0)}%</p>
                 </div>
-
-                {/* TARJETA SUSTITUTA: PROMEDIO DIARIO NECESARIO */}
-                <div className="p-4 bg-slate-50 rounded-2xl transition-all hover:shadow-inner flex flex-col items-center justify-center">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
-                    <TrendingUp size={11} /> Promedio Diario
-                  </p>
-                  <p className={temaActual === 'gradienteEstatico' ? "text-2xl font-black bg-gradient-to-r from-[#7a57d1] to-[#e44d9b] bg-clip-text text-transparent" : `text-2xl font-black ${t.primary}`}>
-                    {textoPromedioNecesario}
+                
+                {/* NUEVA TARJETA ÚTIL: PROMEDIO DIARIO NECESARIO */}
+                <div className="p-4 bg-slate-50 rounded-2xl flex flex-col items-center justify-center border border-slate-100 transition-all hover:shadow-inner">
+                  <div className="flex items-center gap-1 text-slate-400 mb-1">
+                    <TrendingUp size={14} />
+                    <span className="text-[9px] font-bold uppercase tracking-wider">Promedio Diario</span>
+                  </div>
+                  <p className={`text-base font-black ${temaActual === 'gradienteEstatico' ? 'bg-gradient-to-r from-[#7a57d1] to-[#e44d9b] bg-clip-text text-transparent' : t.primary}`}>
+                    {calcularPromedioDiario()}
                   </p>
                 </div>
               </div>
 
-              <div className="mb-6 bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
+              <div className="mb-8 bg-slate-100 h-3 rounded-full overflow-hidden p-0.5">
                 <div 
                   className={`h-full rounded-full transition-all duration-1000 ${t.primaryBg}`} 
                   style={{ width: `${porcentaje}%` }}
                 ></div>
               </div>
 
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={enviarWhatsApp} 
-                  className="w-full bg-[#25D366] text-white py-4 px-8 rounded-2xl font-black uppercase tracking-widest text-xs md:text-sm shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-3"
-                >
-                  <Send size={18} className="fill-white" /> ENVIAR INFORME POR WHATSAPP
-                </button>
-
-                {/* OPCIÓN DISCRETA PARA REINICIAR EL MES AL FINAL DEL PANEL */}
-                <button 
-                  onClick={() => {
-                    if(window.confirm("¿Estás segura de reiniciar los registros de horas de este mes? Se mantendrán tus cursos.")) {
-                      updateCurrentMonth({ historial: {} });
-                    }
-                  }} 
-                  className="text-slate-400 hover:text-red-500 text-[11px] font-bold uppercase tracking-wider py-1 transition-colors self-center flex items-center gap-1"
-                >
-                  <Trash2 size={12} /> Reiniciar registros del mes
-                </button>
-              </div>
+              <button 
+                onClick={enviarWhatsApp} 
+                className="w-full bg-[#25D366] text-white py-4 px-8 rounded-2xl font-black uppercase tracking-widest text-xs md:text-sm shadow-lg hover:brightness-105 active:scale-95 transition-all flex items-center justify-center gap-3"
+              >
+                <Send size={18} className="fill-white" /> ENVIAR INFORME POR WHATSAPP
+              </button>
             </section>
 
-            {/* CURSOS BÍBLICOS */}
+            {/* CURSOS BÍBLICOS DETALLADOS */}
             <section className="bg-white p-6 md:p-8 rounded-[3rem] shadow-sm border border-slate-100">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -910,7 +903,7 @@ const App = () => {
         </div>
       </div>
 
-      {/* RESPALDO DE DATOS */}
+      {/* BOTONES DISCRETOS Y SUTILES PARA RESPALDO DE DATOS (IMPORTAR Y EXPORTAR) */}
       <div className="fixed bottom-6 left-6 z-[100] flex gap-2 opacity-50 hover:opacity-100 transition-opacity">
         <button 
           onClick={exportarDatos} 
@@ -938,7 +931,6 @@ const App = () => {
         />
       </div>
 
-      {/* MODAL NOTA DÍA */}
       {modalNotaDia !== null && (
         <div className="fixed inset-0 z-[120] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-6">
@@ -980,7 +972,7 @@ const App = () => {
         </div>
       )}
 
-      {/* SELECTOR DE TEMAS */}
+      {/* SELECTOR FLOTANTE DE TEMAS ORGANIZADO POR TONALIDAD */}
       <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3">
         {showThemeSelector && (
             <div className="bg-white/95 backdrop-blur-md p-3 rounded-3xl shadow-2xl border border-slate-100 flex flex-col gap-3 max-h-[70vh] overflow-y-auto animate-in fade-in slide-in-from-bottom-4 scrollbar-none">
@@ -996,7 +988,7 @@ const App = () => {
                                            key === 'amarillo' ? '#f59e0b' :
                                            temas[key].primaryBg.includes('pink') ? '#db2777' : 
                                            temas[key].primaryBg.includes('purple') ? '#9333ea' :
-                                           temas[key].primaryBg.includes('blue' ) ? '#2563eb' :
+                                           temas[key].primaryBg.includes('blue') ? '#2563eb' :
                                            temas[key].primaryBg.includes('emerald') ? '#059669' : '#ea580c'
                         }}
                         title={temas[key].name}
@@ -1013,7 +1005,6 @@ const App = () => {
         </button>
       </div>
 
-      {/* MODAL CURSO */}
       {showEditModal && (
         <div className="fixed inset-0 z-[110] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] p-6 md:p-8 shadow-2xl border border-slate-100 animate-in slide-in-from-bottom-6">
