@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calendar as CalendarIcon, Clock, BookOpen, Trash2, Target, 
   Timer, ChevronRight, ChevronLeft, UserPlus, Send, X, Play, Pause, RotateCcw,
-  Palette, CheckCircle2, Bookmark, Download, Upload, CalendarDays
+  Palette, CheckCircle2, Bookmark, Download, Upload, TrendingUp
 } from 'lucide-react';
 
 const App = () => {
@@ -368,10 +368,20 @@ const App = () => {
   };
 
   const { horas, minutos, totalMinutos } = calcularTotales();
-  const diasConRegistro = Object.keys(currentData.historial || {}).filter(d => {
-    const reg = currentData.historial[d];
-    return reg && (reg.h > 0 || reg.m > 0);
-  }).length;
+
+  // --- CÁLCULO DE PROMEDIO DIARIO NECESARIO ---
+  const metaMinutos = (currentData.meta || 50) * 60;
+  const minutosFaltantes = Math.max(0, metaMinutos - totalMinutos);
+  
+  // Días que quedan en el mes contando desde hoy (o el total de días si se prefiere, aquí calculamos según los días restantes del mes)
+  const diaActualNum = new Date().getDate();
+  const esMesActual = new Date().getMonth() === mesIndice && new Date().getFullYear() === anioActual;
+  const diasRestantes = esMesActual ? Math.max(1, totalDiasMes - diaActualNum + 1) : totalDiasMes;
+  
+  const promedioNecesarioMinutos = Math.ceil(minutosFaltantes / diasRestantes);
+  const promNecH = Math.floor(promedioNecesarioMinutos / 60);
+  const promNecM = promedioNecesarioMinutos % 60;
+  const textoPromedioNecesario = promNecH > 0 ? `${promNecH}h ${promNecM}m` : `${promNecM}m`;
 
   const updateCurrentMonth = (newData) => {
     setDatosMensuales(prev => ({ ...prev, [storageKey]: { ...currentData, ...newData } }));
@@ -551,7 +561,7 @@ const App = () => {
       <div className="max-w-5xl mx-auto relative z-10">
         <header className="text-center mb-10">
           <div className={`inline-flex items-center justify-center p-3 rounded-full ${t.primaryLight} mb-3 shadow-sm transition-colors animate-bounce`}>
-            {/* LOGO MEJORADO EXACTO A LA SEGUNDA IMAGEN */}
+            {/* CARITA IDÉNTICA Y EXACTA A LA SEGUNDA IMAGEN */}
             <svg 
               viewBox="0 0 100 100" 
               className={`w-11 h-11 ${temaActual === 'gradienteEstatico' ? "text-[#7a57d1]" : t.primary}`}
@@ -559,7 +569,7 @@ const App = () => {
               <circle cx="50" cy="50" r="41" fill="none" stroke="currentColor" strokeWidth="8" />
               <circle cx="36" cy="38" r="5.5" fill="currentColor" />
               <circle cx="64" cy="38" r="5.5" fill="currentColor" />
-              <path d="M 33 56 Q 50 72 67 56" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+              <path d="M 34 57 Q 50 71 66 57" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
             </svg>
           </div>
           <h1 className="text-3xl md:text-5xl font-extrabold text-slate-800 tracking-tight">
@@ -794,11 +804,13 @@ const App = () => {
                   <p className="text-2xl font-black">{porcentaje.toFixed(0)}%</p>
                 </div>
 
-                {/* BOTÓN REEMPLAZADO: DÍAS ACTIVOS (EN LUGAR DEL BOTÓN DE LIMPIAR) */}
+                {/* TARJETA SUSTITUTA: PROMEDIO DIARIO NECESARIO */}
                 <div className="p-4 bg-slate-50 rounded-2xl transition-all hover:shadow-inner flex flex-col items-center justify-center">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Días Activos</p>
-                  <p className={temaActual === 'gradienteEstatico' ? "text-2xl font-black text-[#7a57d1]" : `text-2xl font-black ${t.primary}`}>
-                    {diasConRegistro}
+                  <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                    <TrendingUp size={11} /> Promedio Diario
+                  </p>
+                  <p className={temaActual === 'gradienteEstatico' ? "text-2xl font-black bg-gradient-to-r from-[#7a57d1] to-[#e44d9b] bg-clip-text text-transparent" : `text-2xl font-black ${t.primary}`}>
+                    {textoPromedioNecesario}
                   </p>
                 </div>
               </div>
@@ -818,7 +830,7 @@ const App = () => {
                   <Send size={18} className="fill-white" /> ENVIAR INFORME POR WHATSAPP
                 </button>
 
-                {/* OPCIÓN DISCRETA PARA REINICIAR EL MES AL FINAL DEL PANEL CON CONFIRMACIÓN */}
+                {/* OPCIÓN DISCRETA PARA REINICIAR EL MES AL FINAL DEL PANEL */}
                 <button 
                   onClick={() => {
                     if(window.confirm("¿Estás segura de reiniciar los registros de horas de este mes? Se mantendrán tus cursos.")) {
@@ -984,7 +996,7 @@ const App = () => {
                                            key === 'amarillo' ? '#f59e0b' :
                                            temas[key].primaryBg.includes('pink') ? '#db2777' : 
                                            temas[key].primaryBg.includes('purple') ? '#9333ea' :
-                                           temas[key].primaryBg.includes('blue') ? '#2563eb' :
+                                           temas[key].primaryBg.includes('blue' ) ? '#2563eb' :
                                            temas[key].primaryBg.includes('emerald') ? '#059669' : '#ea580c'
                         }}
                         title={temas[key].name}
