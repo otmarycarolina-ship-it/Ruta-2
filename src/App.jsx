@@ -370,7 +370,7 @@ const App = () => {
 
   const { horas, minutos, totalMinutos } = calcularTotales();
 
-  // --- CÁLCULO DINÁMICO DEL PROMEDIO DIARIO NECESARIO ---
+  // --- CÁLCULO ESTRICTO Y DINÁMICO DEL PROMEDIO DIARIO NECESARIO ---
   const calcularPromedioDiario = () => {
     const metaMinutos = (currentData.meta || 1) * 60;
     const minutosFaltantes = Math.max(0, metaMinutos - totalMinutos);
@@ -379,23 +379,17 @@ const App = () => {
     const hoyNum = new Date().getDate();
     const esMesActual = new Date().getMonth() === mesIndice && new Date().getFullYear() === anioActual;
 
-    let diasHabiLesRestantes = 0;
     const horario = currentData.horarioActividades || {};
-    const tienePlanesConfigurados = Object.keys(horario).length > 0;
+    const diasSalidaProgramados = Object.keys(horario).map(Number);
 
-    for (let d = 1; d <= totalDiasMes; d++) {
-      if (esMesActual && d < hoyNum) continue; // Ignorar días pasados si estamos en el mes en curso
+    // Si no hay días marcados en el horario mensual, tomamos todos los días restantes del mes
+    const diasObjetivo = diasSalidaProgramados.length > 0 
+      ? diasSalidaProgramados.filter(d => !esMesActual || d >= hoyNum)
+      : Array.from({ length: totalDiasMes }, (_, i) => i + 1).filter(d => !esMesActual || d >= hoyNum);
 
-      if (tienePlanesConfigurados) {
-        if (horario[d]) diasHabiLesRestantes++;
-      } else {
-        diasHabiLesRestantes++;
-      }
-    }
+    if (diasObjetivo.length === 0) return "Sin días restantes";
 
-    if (diasHabiLesRestantes === 0) return "Sin días restantes";
-
-    const minPorDia = Math.ceil(minutosFaltantes / diasHabiLesRestantes);
+    const minPorDia = Math.ceil(minutosFaltantes / diasObjetivo.length);
     const hReq = Math.floor(minPorDia / 60);
     const mReq = minPorDia % 60;
 
@@ -828,7 +822,7 @@ const App = () => {
                   <p className="text-2xl font-black">{porcentaje.toFixed(0)}%</p>
                 </div>
 
-                {/* HERRAMIENTA UTILITARIA EN SUSTITUACIÓN DEL BOTÓN LIMPIAR */}
+                {/* HERRAMIENTA UTILITARIA DE PROMEDIO */}
                 <div 
                   onClick={() => setShowPromedioInfo(!showPromedioInfo)}
                   className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all relative group"
@@ -844,7 +838,7 @@ const App = () => {
                 </div>
               </div>
 
-              {/* POPUP EXPLICATIVO DE LA HERRAMIENTA DE PROMEDIO */}
+              {/* POPUP EXPLICATIVO */}
               {showPromedioInfo && (
                 <div className="mb-6 p-4 bg-purple-50/70 border border-purple-100 rounded-2xl text-left text-xs text-slate-600 animate-in fade-in duration-200 relative">
                   <button 
@@ -857,10 +851,10 @@ const App = () => {
                     <Calculator size={14} className={t.primary} /> ¿Cómo funciona el Promedio Diario Necesario?
                   </p>
                   <p className="leading-relaxed text-[11px]">
-                    Toma las horas que te faltan para alcanzar tu meta y las divide equitativamente entre los días restantes del mes.
+                    Toma las horas que te faltan para alcanzar tu meta y las divide equitativamente entre los días que marques en tu horario mensual.
                   </p>
                   <p className="leading-relaxed text-[11px] font-semibold mt-1.5 text-slate-700">
-                    💡 Si organizas tu <strong>Horario Mensual</strong> marcando los días que vas a salir, se sincroniza automáticamente para calcular la meta dividiéndola únicamente entre tus días planeados. Así evitas sorpresas a fin de mes y ajustas tu ritmo diario con tranquilidad.
+                    💡 Si en un día de salida hiciste menos horas de las indicadas, ese déficit pendiente no se pierde: <strong>se suma automáticamente a tus próximos días de salida programados</strong> para que alcances tu meta con total exactitud.
                   </p>
                 </div>
               )}
@@ -1032,7 +1026,7 @@ const App = () => {
                                            key === 'amarillo' ? '#f59e0b' :
                                            temas[key].primaryBg.includes('pink') ? '#db2777' : 
                                            temas[key].primaryBg.includes('purple') ? '#9333ea' :
-                                           temas[key].primaryBg.includes('blue') ? '#2563eb' :
+                                           temas[key].primaryBg.includes('blue' ) ? '#2563eb' :
                                            temas[key].primaryBg.includes('emerald') ? '#059669' : '#ea580c'
                         }}
                         title={temas[key].name}
